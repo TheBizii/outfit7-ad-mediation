@@ -2,11 +2,11 @@ package main
 
 import (
 	"log"
-	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/TheBizii/outfit7-ad-mediation/internal/config"
 	"github.com/TheBizii/outfit7-ad-mediation/internal/db"
+	"github.com/TheBizii/outfit7-ad-mediation/internal/routes"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -14,15 +14,11 @@ func main() {
 	database := db.Connect(cfg.PSQLUrl)
 	defer database.Close() // will run when main() stops running
 
-	router := gin.Default()
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Still breathing!",
-		})
-	})
+	r := gin.Default()
+	routes.RegisterRoutes(r)
 
 	log.Println("Starting server on http://localhost:" + cfg.AppPort + "...")
-	if err := router.Run(":" + cfg.AppPort); err != nil {
+	if err := r.Run(":" + cfg.AppPort); err != nil {
 		log.Fatal("Server failed:", err)
 	}
 }
