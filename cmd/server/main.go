@@ -10,15 +10,21 @@ import (
 )
 
 func main() {
-	cfg := config.Load()
-	database := db.Connect(cfg.PSQLUrl)
-	defer database.Close() // will run when main() stops running
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal("Failed to load the configuration: ", err)
+	}
+
+	if err := db.Connect(cfg.PSQLUrl); err != nil {
+		log.Fatal("Failed to connect to the database: ", err)
+	}
+	defer db.Conn.Close() // will run when main() stops running
 
 	r := gin.Default()
 	routes.RegisterRoutes(r)
 
 	log.Println("Starting server on http://localhost:" + cfg.AppPort + "...")
 	if err := r.Run(":" + cfg.AppPort); err != nil {
-		log.Fatal("Server failed:", err)
+		log.Fatal("Server failed: ", err)
 	}
 }

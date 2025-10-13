@@ -1,7 +1,7 @@
 package config
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -12,22 +12,37 @@ type Config struct {
 	AppPort string
 }
 
-func Load() *Config {
+func Load() (*Config, error) {
 	// load the local .env file
 	_ = godotenv.Load()
 
+	// define the Postgres connection
+	PSQL_HOST := os.Getenv("PSQL_HOST")
+	PSQL_USER := os.Getenv("PSQL_USER")
+	PSQL_PASSWORD := os.Getenv("PSQL_PASSWORD")
+	PSQL_DBNAME := os.Getenv("PSQL_DBNAME")
+	PSQL_PORT := os.Getenv("PSQL_PORT")
+
+	psqlUrl := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		PSQL_HOST,
+		PSQL_USER,
+		PSQL_PASSWORD,
+		PSQL_DBNAME,
+		PSQL_PORT)
+
+	// init the config struct
 	cfg := &Config{
-		PSQLUrl: os.Getenv("PSQL_URL"),
+		PSQLUrl: psqlUrl,
 		AppPort: os.Getenv("APP_PORT"),
 	}
 
 	// make sure the user is properly made aware of missing ENV variables
-	if cfg.PSQLUrl == "" {
-		log.Fatal("Missing PSQL_URL from .env")
+	if PSQL_HOST == "" || PSQL_USER == "" || PSQL_PASSWORD == "" || PSQL_DBNAME == "" || PSQL_PORT == "" {
+		return nil, fmt.Errorf("Make sure your .env config has the following required variables present: PSQL_HOST, PSQL_USER, PSQL_PASSWORD, PSQL_DBNAME, PSQL_PORT.")
 	}
 	if cfg.AppPort == "" {
-		log.Fatal("Missing APP_PORT from .env")
+		return nil, fmt.Errorf("Missing APP_PORT from .env.")
 	}
 
-	return cfg
+	return cfg, nil
 }
