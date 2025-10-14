@@ -11,6 +11,46 @@ import (
 	"github.com/TheBizii/outfit7-ad-mediation/internal/models"
 )
 
+func GetAdNetworks(req models.GetNetworksRequest) ([]string, error) {
+	if req.CountryCode == "" || req.AdType == "" {
+		return nil, fmt.Errorf("You must supply the countryCode and adType parameters.")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// to keep the code clean and simple, I apply contextual filtering separately
+	const getNetworksStmt = `
+		SELECT network.network_name
+		FROM priority_networks network
+		JOIN priority_lists list ON list.id = network.priority_list_id
+		WHERE list.country_code = $1 AND list.ad_type = $2
+		ORDER BY network.score DESC;`
+
+	rows, err := db.Conn.QueryContext(ctx, getNetworksStmt, req.CountryCode, req.AdType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// process rows returned by the SELECT statement
+	var networks []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		networks = append(networks, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// apply contextual filtering
+	filtered := applyContextFilters(networks, req)
+	return filtered, nil
+}
+
 func UpsertPriorityList(countryCode string, adType string, req models.UpdateNetworksRequest) error {
 	if len(req.Networks) == 0 {
 		return fmt.Errorf("Request body is missing networks and their performance scores.")
@@ -77,4 +117,48 @@ func UpsertPriorityList(countryCode string, adType string, req models.UpdateNetw
 
 	// nothing went wrong, commit the transaction
 	return tx.Commit()
+}
+
+// helper functions
+func applyContextFilters(networks []string, req models.GetNetworksRequest) []string {
+	var filtered []string
+	osMajorVersion := extractMajorVersion(req.OSVersion)
+	hasAdMob := false
+	hasAdMobOptOut := false
+
+	for _, network := range networks {
+		if network == "AdMob" {
+			if strings.EqualFold(req.Platform, "android") && osMajorVersion == "9" {
+				// AdMob does not work on Android OS if major version is 9
+				continue
+			}
+			hasAdMob = true
+		} else if network == "AdMob-OptOut" {
+			// AdMob-OptOut will be included if it was registered as a valid ad network for this country and
+			// AdMob was present in the original list of ad networks
+			hasAdMobOptOut = true
+			continue
+		} else if network == "Facebook" {
+			if strings.EqualFold(req.CountryCode, "CN") {
+				// Facebook should not be served in CN
+				continue
+			}
+		}
+
+		filtered = append(filtered, network)
+	}
+
+	// AdMob-OptOut should be present in the list only if there is no AdMob in the list
+	if !hasAdMob && hasAdMobOptOut {
+		filtered = append(filtered, "AdMob-OptOut")
+	}
+
+	return filtered
+}
+
+func extractMajorVersion(version string) string {
+	if i := strings.Index(version, "."); i != -1 {
+		return version[:i]
+	}
+	return version
 }

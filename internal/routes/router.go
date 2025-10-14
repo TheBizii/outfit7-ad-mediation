@@ -12,9 +12,9 @@ func RegisterRoutes(router *gin.Engine) {
 	api := router.Group("/api/v1")
 	{
 		// retrieve sorted priority lists for mobile apps
-		api.GET("/ad-networks", controllers.GetAdNetworks)
+		api.GET("/ad_networks/:countryCode/:adType", controllers.GetAdNetworks)
 		// update route for ad networks
-		api.PUT("/ad-networks/:country-code/:ad-type", controllers.UpdateAdNetworks)
+		api.PUT("/ad_networks/:countryCode/:adType", controllers.UpdateAdNetworks)
 
 		// this route is called from the dashboard
 		api.GET("/dashboard", GetDashboard)
