@@ -1,0 +1,208 @@
+openapi: 3.0.4
+info:
+  title: Outfit7 Ad Mediation API
+  version: 1.0.0
+  description: >
+    REST API for managing and serving ad network priority lists per country and ad type.
+    Includes health check, retrieval for mobile apps, dashboard data and an update endpoint.
+  contact:
+    email: bizjaktomaz@protonmail.com
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns service health.
+      responses:
+        '200':
+          description: Service is running.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Still breathing!"
+
+  /api/v1/ad_networks/{countryCode}/{adType}:
+    get:
+      summary: Get ad networks for a country and ad type
+      description: >
+        Returns the prioritized list of ad networks for the given country and ad type.
+        The mobile app calls this endpoint. All query parameters are optional.
+      parameters:
+        - name: countryCode
+          in: path
+          required: true
+          description: ISO country code (e.g. US, CN, DE)
+          schema:
+            type: string
+            example: US
+        - name: adType
+          in: path
+          required: true
+          description: Ad type (e.g. banner, interstitial, rewarded_video)
+          schema:
+            type: string
+            example: rewarded_video
+        - name: osVersion
+          in: query
+          required: false
+          description: Mobile OS version (optional). It has no effect, if platform is not provided.
+          schema:
+            type: string
+            example: 9.3.2
+        - name: platform
+          in: query
+          required: false
+          description: Platform name (optional, for example android or ios)
+          schema:
+            type: string
+            example: android
+        - name: appName
+          in: query
+          required: false
+          description: Mobile app name (optional)
+          schema:
+            type: string
+            example: TalkingTom
+        - name: appVersion
+          in: query
+          required: false
+          description: Mobile app version (optional)
+          schema:
+            type: string
+            example: 1.0.0
+      responses:
+        '200':
+          description: Successful retrieval
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  adType:
+                    type: string
+                    example: rewarded_video
+                  countryCode:
+                    type: string
+                    example: US
+                  networks:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Facebook
+                      - UnityAds
+                      - AdMob-OptOut
+                  status:
+                    type: string
+                    example: ok
+
+    put:
+      summary: Update ad networks for a given country and ad type
+      description: >
+        Updates or creates the priority list for a specific country and ad type.
+        The list is replaced or updated based on the provided network scores.
+      parameters:
+        - name: countryCode
+          in: path
+          required: true
+          description: ISO country code (e.g. US)
+          schema:
+            type: string
+        - name: adType
+          in: path
+          required: true
+          description: Ad type (e.g. rewarded_video)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                networks:
+                  type: array
+                  description: Ordered list of ad networks with scores.
+                  items:
+                    type: object
+                    properties:
+                      networkName:
+                        type: string
+                        example: AdMob
+                      score:
+                        type: number
+                        format: float
+                        example: 0.92
+      responses:
+        '200':
+          description: Priority list successfully updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  adType:
+                    type: string
+                    example: rewarded_video
+                  countryCode:
+                    type: string
+                    example: US
+                  numUpdatedNetworks:
+                    type: integer
+                    example: 4
+                  status:
+                    type: string
+                    example: ok
+
+  /api/v1/ad_networks/dashboard:
+    get:
+      summary: Dashboard summary of all priority lists
+      description: >
+        Returns all existing priority lists for all countries and ad types,
+        including their ordered ad networks and scores. Intended for dashboard use.
+      responses:
+        '200':
+          description: List of all priority lists with networks and scores.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lists:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        countryCode:
+                          type: string
+                          example: US
+                        adType:
+                          type: string
+                          example: rewarded_video
+                        lastUpdated:
+                          type: string
+                          format: date-time
+                          example: "2025-10-15T11:56:55.63736Z"
+                        networks:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              networkName:
+                                type: string
+                                example: Facebook
+                              score:
+                                type: number
+                                format: float
+                                example: 0.92
+                  status:
+                    type: string
+                    example: ok
+
