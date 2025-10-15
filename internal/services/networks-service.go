@@ -184,7 +184,7 @@ func UpsertPriorityList(countryCode string, adType string, req models.UpdateNetw
 
 // helper functions
 func applyContextFilters(networks []string, req models.GetNetworksRequest) []string {
-	var filtered []string
+	filtered := make([]string, 0)
 	osMajorVersion := extractMajorVersion(req.OSVersion)
 	hasAdMob := false
 	hasAdMobOptOut := false
