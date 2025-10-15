@@ -7,7 +7,7 @@ import (
 
 func RegisterRoutes(router *gin.Engine) {
 	// health route (similar to ping in other applications)
-	router.GET("/health", GetHealth)
+	router.GET("/health", controllers.GetHealth)
 
 	api := router.Group("/api/v1/ad_networks")
 	{
