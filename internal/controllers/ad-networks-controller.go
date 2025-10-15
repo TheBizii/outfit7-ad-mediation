@@ -8,6 +8,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func GetNetworksDashboard(ctx *gin.Context) {
+	lists, err := services.GetDashboardPriorityLists()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"status": "ok",
+		"lists":  lists,
+	})
+}
+
 func GetAdNetworks(ctx *gin.Context) {
 	body := models.GetNetworksRequest{
 		CountryCode: ctx.Param("countryCode"),

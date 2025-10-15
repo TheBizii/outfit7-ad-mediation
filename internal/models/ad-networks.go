@@ -18,13 +18,13 @@ type PriorityNetwork struct {
 }
 
 // structs for the ad networks update route
-type UpdatePayloadNetwork struct {
+type NetworkScore struct {
 	NetworkName string  `json:"networkName" binding:"required"`
 	Score       float32 `json:"score" binding:"required"`
 }
 
 type UpdateNetworksRequest struct {
-	Networks []UpdatePayloadNetwork `json:"networks" binding:"required"`
+	Networks []NetworkScore `json:"networks" binding:"required"`
 }
 
 // structs for the get ad networks route
@@ -35,4 +35,12 @@ type GetNetworksRequest struct {
 	OSVersion   string `json:"osVersion"`
 	AppName     string `json:"appName"`
 	AppVersion  string `json:"appVersion"`
+}
+
+// structs for the get dashboard route
+type PriorityListSummary struct {
+	CountryCode string         `json:"countryCode"`
+	AdType      string         `json:"adType"`
+	LastUpdated time.Time      `json:"lastUpdated"`
+	Networks    []NetworkScore `json:"networks"`
 }

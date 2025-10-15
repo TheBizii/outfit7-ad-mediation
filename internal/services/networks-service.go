@@ -11,6 +11,69 @@ import (
 	"github.com/TheBizii/outfit7-ad-mediation/internal/models"
 )
 
+func GetDashboardPriorityLists() ([]models.PriorityListSummary, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// select all priority lists and their ad networks and scores
+	const getPriorityListsStmt = `
+		SELECT list.country_code, list.ad_type, list.last_updated, network.network_name, network.score
+		FROM priority_lists list
+		LEFT JOIN priority_networks network ON list.id = network.priority_list_id
+		ORDER BY list.country_code ASC, list.ad_type ASC, network.score DESC;`
+
+	rows, err := db.Conn.QueryContext(ctx, getPriorityListsStmt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// used to group results together by (country, adType) pair
+	type key struct {
+		countryCode string
+		adType      string
+	}
+	groups := make(map[key]*models.PriorityListSummary)
+
+	// process all rows and group
+	for rows.Next() {
+		var countryCode, adType, networkName string
+		var lastUpdated sql.NullTime
+		var score sql.NullFloat64
+
+		if err := rows.Scan(&countryCode, &adType, &lastUpdated, &networkName, &score); err != nil {
+			return nil, err
+		}
+
+		k := key{countryCode: countryCode, adType: adType}
+		group, exists := groups[k]
+		if !exists {
+			group = &models.PriorityListSummary{
+				CountryCode: countryCode,
+				AdType:      adType,
+				LastUpdated: lastUpdated.Time,
+				Networks:    []models.NetworkScore{},
+			}
+			groups[k] = group
+		}
+
+		networkScore := models.NetworkScore{
+			NetworkName: networkName,
+			Score:       float32(score.Float64),
+		}
+		group.Networks = append(group.Networks, networkScore)
+	}
+
+	groupsSlice := make([]models.PriorityListSummary, 0, len(groups))
+	for _, group := range groups {
+		if group != nil {
+			groupsSlice = append(groupsSlice, *group)
+		}
+	}
+
+	return groupsSlice, nil
+}
+
 func GetAdNetworks(req models.GetNetworksRequest) ([]string, error) {
 	if req.CountryCode == "" || req.AdType == "" {
 		return nil, fmt.Errorf("You must supply the countryCode and adType parameters.")
